@@ -1,0 +1,47 @@
+const express = require("express")
+const app = express()
+const mongoose = require("mongoose")
+const apiDB = require('./models/apiModel')
+
+mongoose.connect('mongodb://localhost/apiModel', {
+    useNewUrlParser: true, useUnifiedTopology: true
+})
+
+app.set('view engine' , 'ejs')
+app.listen(process.env.PORT || 5002)
+
+app.get("/start", async (req, res) => {
+    await apiDB.create({call: "nothing", rateLimit: 2})
+    res.redirect("/api")
+    
+})
+
+app.get("/api", async (req, res) => {
+
+    var apiInfo = await apiDB.findOne({call: "nothing"})
+    const callLogInfo = apiInfo.callLogs
+    
+    const noOfCallsMade = async (callLogInfo) => {
+        const currentTime = new Date()
+        let index = callLogInfo.length-1
+        let count = 0
+
+        while(index >= 0 && currentTime-callLogInfo[index] <= 60000 && count < apiInfo.rateLimit){
+            console.log(currentTime-apiInfo.callLogs[index], "time difference")
+            count += 1
+            index -= 1
+        }
+        console.log("this is count-------", count)
+        return count
+        
+    }
+    const count = await noOfCallsMade(callLogInfo)
+    if(count >= apiInfo.rateLimit) return res.sendStatus(429)
+    if(apiInfo == null) return res.sendStatus(404)
+    const date = new Date()
+    apiInfo.lastTimeCalled = date
+    apiInfo.callLogs.push(date)
+    apiInfo.save()
+    console.log(apiInfo, "this is api log info")
+    res.json(apiInfo)
+})
