@@ -8,7 +8,7 @@ mongoose.connect('mongodb://localhost/apiModel', {
 })
 
 app.set('view engine' , 'ejs')
-app.listen(process.env.PORT || 5002)
+app.listen(process.env.PORT || 5003)
 
 app.get("/start", async (req, res) => {
     await apiDB.create({call: "nothing", rateLimit: 2})
@@ -17,7 +17,7 @@ app.get("/start", async (req, res) => {
 })
 
 app.get("/api", async (req, res) => {
-
+    var firstCallInWindow = -1
     var apiInfo = await apiDB.findOne({call: "nothing"})
     const callLogInfo = apiInfo.callLogs
     
@@ -25,20 +25,28 @@ app.get("/api", async (req, res) => {
         const currentTime = new Date()
         let index = callLogInfo.length-1
         let count = 0
-
         while(index >= 0 && currentTime-callLogInfo[index] <= 60000 && count < apiInfo.rateLimit){
             console.log(currentTime-apiInfo.callLogs[index], "time difference")
             count += 1
             index -= 1
+
         }
+        firstCallInWindow = index+1
         console.log("this is count-------", count)
         return count
         
     }
     const count = await noOfCallsMade(callLogInfo)
-    if(count >= apiInfo.rateLimit) return res.sendStatus(429)
-    if(apiInfo == null) return res.sendStatus(404)
     const date = new Date()
+    if(count >= apiInfo.rateLimit){
+        let index = callLogInfo.length-1
+        let waitingTime = parseInt((60000-(date-callLogInfo[firstCallInWindow]))/1000)
+        res.setHeader('X-WAIT-TILL', waitingTime)
+        res.setHeader('X-RATE-LIMIT', apiInfo.rateLimit)
+        return res.sendStatus(429)
+    }
+    if(apiInfo == null) return res.sendStatus(404)
+    
     apiInfo.lastTimeCalled = date
     apiInfo.callLogs.push(date)
     apiInfo.save()
