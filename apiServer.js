@@ -46,7 +46,7 @@ app.get("/api", async (req, res) => {
         return res.sendStatus(429)
     }
     if(apiInfo == null) return res.sendStatus(404)
-    
+    apiInfo.totalTimesCalled++
     apiInfo.lastTimeCalled = date
     apiInfo.callLogs.push(date)
     apiInfo.save()
