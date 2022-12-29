@@ -11,7 +11,7 @@ app.set('view engine' , 'ejs')
 app.listen(process.env.PORT || 5003)
 app.use(express.json)
 app.get("/start", async (req, res) => {
-    await apiDB.create({call: "x", rateLimit: 2})
+    await apiDB.create({call: "x"})
     res.redirect("/api")
     
 })
