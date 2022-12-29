@@ -18,6 +18,7 @@ const APISchema = new mongoose.Schema({
         type: String,
         default: 0
     },
+    failedReq: [],
     callLogs: []
 
 })

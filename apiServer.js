@@ -9,16 +9,23 @@ mongoose.connect('mongodb://localhost/apiModel', {
 
 app.set('view engine' , 'ejs')
 app.listen(process.env.PORT || 5003)
-
+app.use(express.json)
 app.get("/start", async (req, res) => {
-    await apiDB.create({call: "nothing", rateLimit: 2})
+    await apiDB.create({call: "x", rateLimit: 2})
     res.redirect("/api")
     
 })
 
+app.post("/rate", async (req, res) => {
+    var apiInfo = await apiDB.findOne({call: "x"})
+    apiInfo.rateLimit = req.body.rate
+    apiInfo.save()
+    console.log("this is rate limit: ----", apiInfo.rateLimit)
+})
+
 app.get("/api", async (req, res) => {
     var firstCallInWindow = -1
-    var apiInfo = await apiDB.findOne({call: "nothing"})
+    var apiInfo = await apiDB.findOne({call: "x"})
     const callLogInfo = apiInfo.callLogs
     
     const noOfCallsMade = async (callLogInfo) => {
@@ -39,6 +46,8 @@ app.get("/api", async (req, res) => {
     const count = await noOfCallsMade(callLogInfo)
     const date = new Date()
     if(count >= apiInfo.rateLimit){
+        apiInfo.failedReq.push(date)
+        apiInfo.save()
         let index = callLogInfo.length-1
         let waitingTime = parseInt((60000-(date-callLogInfo[firstCallInWindow]))/1000)
         res.setHeader('X-WAIT-TILL', waitingTime)
